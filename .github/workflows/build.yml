@@ -67,25 +67,27 @@ jobs:
           EOF
 
           cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://android.com">
+                    <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://android.com" xmlns:tools="http://android.com">
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-permission android:name="android.permission.FLASHLIGHT" />
-              <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+              <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
               <application android:allowBackup="true" android:label="iOS Control Center" android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
-                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" tools:replace="android:value"/>
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
                   </activity>
-                  <service android:name=".ControlCenterService" android:enabled="true" android:exported="false" android:foregroundServiceType="specialUse" />
+                  <service android:name=".ControlCenterService" android:enabled="true" android:exported="false" android:foregroundServiceType="specialUse">
+                      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="iOS Control Center Overlay"/>
+                  </service>
               </application>
           </manifest>
-          EOF
+          
 
           cat << 'EOF' > app/src/main/res/drawable/ios_tile_bg.xml
           <?xml version="1.0" encoding="utf-8"?>
