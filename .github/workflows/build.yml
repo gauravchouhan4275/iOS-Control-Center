@@ -224,7 +224,8 @@ jobs:
               override fun onDestroy() { super.onDestroy(); edge?.let { wm.removeView(it) }; hidePanel() }
           }
           EOF
-
+          find app/src -type f -exec sed -i 's|http://android.com|http://android.com|g' {} +
+          
           gradle wrapper --gradle-version 8.4
           ./gradlew assembleDebug bundleRelease
 
