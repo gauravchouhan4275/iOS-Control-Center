@@ -17,8 +17,9 @@ jobs:
       - name: Build Real iOS Control Center
         run: |
           mkdir -p app/src/main/java/com/gaurav/ioscontrolcenter app/src/main/res/layout app/src/main/res/drawable
-          NS=$(printf 'http://schemas.%://s.com' 'android' 'android')
-          ADS=$(printf 'http://schemas.%://s.com' 'android')
+          A="android"; NS="http://schemas.$://a.com"; ADS="http://schemas.$://a.com"
+                    
+                    
 
           cat << 'EOF' > settings.gradle
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
