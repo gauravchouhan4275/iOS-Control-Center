@@ -1,0 +1,241 @@
+name: Build iOS Control Center
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Create iOS Control Center App
+        run: |
+          mkdir -p app/src/main/java/com/gaurav/ioscontrolcenter app/src/main/res/layout app/src/main/res/drawable
+
+          cat << 'EOF' > settings.gradle
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = "iOSControlCenter"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+              id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+          }
+          EOF
+
+          cat << 'EOF' > gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          kotlin.code.style=official
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+          android {
+              namespace 'com.gaurav.ioscontrolcenter'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.gaurav.ioscontrolcenter"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes { release { minifyEnabled false } }
+              compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+              kotlinOptions { jvmTarget = '17' }
+          }
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'com.google.android.gms:play-services-ads:23.0.0'
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://android.com">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.FLASHLIGHT" />
+              <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+              <application android:allowBackup="true" android:label="iOS Control Center" android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+                  </activity>
+                  <service android:name=".ControlCenterService" android:enabled="true" android:exported="false" android:foregroundServiceType="specialUse" />
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ios_tile_bg.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://android.com">
+              <solid android:color="#801C1C1E" /><corners android:radius="26dp" /><stroke android:width="1dp" android:color="#33FFFFFF" />
+          </shape>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ios_circle_btn.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://android.com" android:shape="oval"><solid android:color="#4D3A3A3C" /></shape>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://android.com" xmlns:ads="http://android.com" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#000000" android:padding="20dp">
+              <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="iOS 18 Control Center" android:textColor="#FFFFFF" android:textSize="28sp" android:textStyle="bold" android:layout_marginTop="16dp"/>
+              <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Swipe down from top-right edge like iPhone" android:textColor="#8E8E93" android:textSize="14sp" android:layout_marginBottom="24dp"/>
+              <Button android:id="@+id/btnPermission" android:layout_width="match_parent" android:layout_height="52dp" android:text="1. Grant iOS Overlay Permissions" android:backgroundTint="#0A84FF" android:textColor="#FFFFFF" android:layout_marginBottom="12dp"/>
+              <Button android:id="@+id/btnToggleService" android:layout_width="match_parent" android:layout_height="56dp" android:text="2. START iOS CONTROL CENTER" android:backgroundTint="#30D158" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginBottom="12dp"/>
+              <Button android:id="@+id/btnPreviewPanel" android:layout_width="match_parent" android:layout_height="50dp" android:text="Open Control Panel Now" android:backgroundTint="#2C2C2E" android:textColor="#0A84FF" android:layout_marginBottom="20dp"/>
+              <com.google.android.gms.ads.AdView android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content" ads:adSize="BANNER" ads:adUnitId="ca-app-pub-3940256099942544/6300978111"/>
+          </LinearLayout>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/layout/layout_control_center.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://android.com" android:id="@+id/rootBlurOverlay" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E6000000" android:padding="22dp">
+              <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_centerInParent="true">
+                  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:weightSum="2" android:layout_marginBottom="14dp">
+                      <LinearLayout android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:background="@drawable/ios_tile_bg" android:orientation="vertical" android:gravity="center" android:layout_marginEnd="7dp">
+                          <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                              <Button android:id="@+id/btnAirplane" android:layout_width="54dp" android:layout_height="54dp" android:text="✈" android:textSize="20sp" android:textColor="#FFFFFF" android:background="@drawable/ios_circle_btn" android:layout_margin="4dp"/>
+                              <Button android:id="@+id/btnData" android:layout_width="54dp" android:layout_height="54dp" android:text="⇅" android:textSize="20sp" android:textColor="#FFFFFF" android:background="@drawable/ios_circle_btn" android:layout_margin="4dp"/>
+                          </LinearLayout>
+                          <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                              <Button android:id="@+id/btnWifi" android:layout_width="54dp" android:layout_height="54dp" android:text="WiFi" android:textSize="12sp" android:textColor="#FFFFFF" android:background="@drawable/ios_circle_btn" android:layout_margin="4dp"/>
+                              <Button android:id="@+id/btnBluetooth" android:layout_width="54dp" android:layout_height="54dp" android:text="BT" android:textSize="13sp" android:textColor="#FFFFFF" android:background="@drawable/ios_circle_btn" android:layout_margin="4dp"/>
+                          </LinearLayout>
+                      </LinearLayout>
+                      <LinearLayout android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:background="@drawable/ios_tile_bg" android:orientation="vertical" android:gravity="center" android:layout_marginStart="7dp">
+                          <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="iOS Music" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="16sp" android:layout_marginBottom="12dp"/>
+                          <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                                       <Button android:id="@+id/btnPrev" android:layout_width="42dp" android:layout_height="42dp" android:text="⏮" android:backgroundTint="#00000000" android:textColor="#FFFFFF"/>
+                              <Button android:id="@+id/btnPlayPause" android:layout_width="46dp" android:layout_height="46dp" android:text="⏯" android:backgroundTint="#00000000" android:textColor="#FFFFFF"/>
+                              <Button android:id="@+id/btnNext" android:layout_width="42dp" android:layout_height="42dp" android:text="⏭" android:backgroundTint="#00000000" android:textColor="#FFFFFF"/>
+                          </LinearLayout>
+                      </LinearLayout>
+                  </LinearLayout>
+                  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/ios_tile_bg" android:orientation="vertical" android:padding="16dp" android:layout_marginBottom="14dp">
+                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☀ Brightness" android:textColor="#FFFFFF" android:textSize="13sp"/>
+                      <SeekBar android:id="@+id/seekBrightness" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="255" android:progress="180" android:progressTint="#FFFFFF" android:layout_marginBottom="12dp"/>
+                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔊 Volume" android:textColor="#FFFFFF" android:textSize="13sp"/>
+                      <SeekBar android:id="@+id/seekVolume" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="15" android:progress="10" android:progressTint="#FFFFFF"/>
+                  </LinearLayout>
+                  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:layout_marginBottom="20dp">
+                      <Button android:id="@+id/btnTorch" android:layout_width="68dp" android:layout_height="68dp" android:text="🔦" android:textSize="24sp" android:background="@drawable/ios_tile_bg" android:layout_margin="6dp"/>
+                      <Button android:id="@+id/btnClock" android:layout_width="68dp" android:layout_height="68dp" android:text="⏰" android:textSize="24sp" android:background="@drawable/ios_tile_bg" android:layout_margin="6dp"/>
+                      <Button android:id="@+id/btnCalc" android:layout_width="68dp" android:layout_height="68dp" android:text="🧮" android:textSize="24sp" android:background="@drawable/ios_tile_bg" android:layout_margin="6dp"/>
+                      <Button android:id="@+id/btnCamera" android:layout_width="68dp" android:layout_height="68dp" android:text="📷" android:textSize="24sp" android:background="@drawable/ios_tile_bg" android:layout_margin="6dp"/>
+                  </LinearLayout>
+                  <Button android:id="@+id/btnClosePanel" android:layout_width="170dp" android:layout_height="44dp" android:text="Close Control Center" android:textColor="#FFFFFF" android:backgroundTint="#3A3A3C" android:layout_gravity="center_horizontal"/>
+              </LinearLayout>
+          </RelativeLayout>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/gaurav/ioscontrolcenter/MainActivity.kt
+          package com.gaurav.ioscontrolcenter
+          import android.content.Intent; import android.net.Uri; import android.os.*; import android.provider.Settings; import android.widget.*; import androidx.appcompat.app.AppCompatActivity
+          import com.google.android.gms.ads.*
+          class MainActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState); setContentView(R.layout.activity_main)
+                  MobileAds.initialize(this) {}; findViewById<AdView>(R.id.adView).loadAd(AdRequest.Builder().build())
+                  findViewById<Button>(R.id.btnPermission).setOnClickListener {
+                      if (!Settings.canDrawOverlays(this)) startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                      else if (!Settings.System.canWrite(this)) startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+                      else Toast.makeText(this, "All iOS Permissions Granted!", Toast.LENGTH_SHORT).show()
+                  }
+                  findViewById<Button>(R.id.btnToggleService).setOnClickListener {
+                      if (!Settings.canDrawOverlays(this)) { Toast.makeText(this, "Click Grant Permissions first!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+                      val i = Intent(this, ControlCenterService::class.java)
+                      if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
+                      Toast.makeText(this, "iOS Control Center Active! Swipe top-right.", Toast.LENGTH_LONG).show()
+                  }
+                  findViewById<Button>(R.id.btnPreviewPanel).setOnClickListener {
+                      if (!Settings.canDrawOverlays(this)) { Toast.makeText(this, "Grant Permissions first!", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+                      startService(Intent(this, ControlCenterService::class.java).apply { action = "SHOW_PANEL" })
+                  }
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/gaurav/ioscontrolcenter/ControlCenterService.kt
+          package com.gaurav.ioscontrolcenter
+          import android.app.*; import android.content.*; import android.graphics.*; import android.hardware.camera2.CameraManager; import android.media.AudioManager; import android.os.*; import android.provider.*; import android.view.*; import android.widget.*; import androidx.core.app.NotificationCompat
+          class ControlCenterService : Service() {
+              private lateinit var wm: WindowManager; private var edge: View? = null; private var panel: View? = null; private var torch = false
+              override fun onBind(i: Intent?): IBinder? = null
+              override fun onCreate() {
+                  super.onCreate(); val ch = "ios_cc"
+                  if (Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(ch, "iOS", NotificationManager.IMPORTANCE_LOW))
+                  startForeground(101, NotificationCompat.Builder(this, ch).setContentTitle("iOS Control Center").setSmallIcon(android.R.drawable.ic_menu_manage).build())
+                  wm = getSystemService(WINDOW_SERVICE) as WindowManager; edge = View(this).apply { setBackgroundColor(Color.parseColor("#1A0A84FF")) }
+                  val p = WindowManager.LayoutParams(240, 55, if (Build.VERSION.SDK_INT >= 26) 2038 else 2002, 8, -3).apply { gravity = Gravity.TOP or Gravity.END }
+                  var sY = 0f; edge?.setOnTouchListener { _, e -> if (e.action == 0) sY = e.rawY; if (e.action == 1 && e.rawY - sY > 40) showPanel(); true }
+                  wm.addView(edge, p)
+              }
+              override fun onStartCommand(i: Intent?, f: Int, s: Int): Int { if (i?.action == "SHOW_PANEL") showPanel(); return START_STICKY }
+              private fun showPanel() {
+                  if (panel != null) return
+                  panel = (getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater).inflate(R.layout.layout_control_center, null)
+                  val p = WindowManager.LayoutParams(-1, -1, if (Build.VERSION.SDK_INT >= 26) 2038 else 2002, 256, -3); val v = panel!!
+                  val audio = getSystemService(AUDIO_SERVICE) as AudioManager; val cam = getSystemService(CAMERA_SERVICE) as CameraManager
+                  v.findViewById<Button>(R.id.btnClosePanel).setOnClickListener { hidePanel() }; v.findViewById<View>(R.id.rootBlurOverlay).setOnClickListener { hidePanel() }
+                  v.findViewById<Button>(R.id.btnWifi).setOnClickListener { hidePanel(); startActivity(Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                  v.findViewById<Button>(R.id.btnBluetooth).setOnClickListener { hidePanel(); startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                  v.findViewById<Button>(R.id.btnAirplane).setOnClickListener { hidePanel(); startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                  v.findViewById<Button>(R.id.btnData).setOnClickListener { hidePanel(); startActivity(Intent(Settings.ACTION_DATA_ROAMING_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                  v.findViewById<Button>(R.id.btnCamera).setOnClickListener { hidePanel(); startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                  v.findViewById<Button>(R.id.btnClock).setOnClickListener { hidePanel(); startActivity(Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                  v.findViewById<Button>(R.id.btnTorch).setOnClickListener { try { torch = !torch; cam.setTorchMode(cam.cameraIdList[0], torch) } catch (e: Exception) {} }
+                  v.findViewById<Button>(R.id.btnCalc).setOnClickListener { hidePanel(); try { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CALCULATOR).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) {} }
+                  val sbV = v.findViewById<SeekBar>(R.id.seekVolume); sbV.max = audio.getStreamMaxVolume(3); sbV.progress = audio.getStreamVolume(3)
+                  sbV.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(s: SeekBar?, pr: Int, u: Boolean) { if (u) audio.setStreamVolume(3, pr, 0) }; override fun onStartTrackingTouch(s: SeekBar?) {}; override fun onStopTrackingTouch(s: SeekBar?) {} })
+                  val sbB = v.findViewById<SeekBar>(R.id.seekBrightness)
+                  sbB.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(s: SeekBar?, pr: Int, u: Boolean) { if (u && Settings.System.canWrite(this@ControlCenterService)) Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, pr) }; override fun onStartTrackingTouch(s: SeekBar?) {}; override fun onStopTrackingTouch(s: SeekBar?) {} })
+                  v.findViewById<Button>(R.id.btnPlayPause).setOnClickListener { audio.dispatchMediaKeyEvent(KeyEvent(0, 85)); audio.dispatchMediaKeyEvent(KeyEvent(1, 85)) }
+                  v.findViewById<Button>(R.id.btnNext).setOnClickListener { audio.dispatchMediaKeyEvent(KeyEvent(0, 87)); audio.dispatchMediaKeyEvent(KeyEvent(1, 87)) }
+                  v.findViewById<Button>(R.id.btnPrev).setOnClickListener { audio.dispatchMediaKeyEvent(KeyEvent(0, 88)); audio.dispatchMediaKeyEvent(KeyEvent(1, 88)) }
+                  wm.addView(panel, p)
+              }
+              private fun hidePanel() { panel?.let { wm.removeView(it); panel = null } }
+              override fun onDestroy() { super.onDestroy(); edge?.let { wm.removeView(it) }; hidePanel() }
+          }
+          EOF
+
+          gradle wrapper --gradle-version 8.4
+          ./gradlew assembleDebug bundleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-Control-Center-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-Control-Center-AAB
+          path: app/build/outputs/bundle/release/app-release.aab
+          
